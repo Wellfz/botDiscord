@@ -2,11 +2,11 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from datetime import datetime
-import os
+from os import getenv
 from db import _Sessao, Usuario
 
 load_dotenv()
-token = os.getenv("TOKEN")
+token = getenv("TOKEN")
 
 permission = discord.Intents.all()
 permission.message_content = True
@@ -21,11 +21,22 @@ def obterUsuario(sessao, discord_id):
             sessao.commit()
         return usuario_db
 
+def registrarSaida(member:discord.Member):
+        horasEstudadas = datetime.now() - horaEntrada[member.id]
+
+        horasEstudadasFormat = horasEstudadas.total_seconds() / 3600
+
+        with _Sessao() as sessao:
+            usuario_db = obterUsuario(sessao, member.id)
+            usuario_db.tempoEstudo = round(usuario_db.tempoEstudo + horasEstudadasFormat, 2)    
+            sessao.commit()
+
 horaEntrada = {}
 @bot.event
 async def on_voice_state_update(member:discord.Member, before, after):
     channel = member.guild.get_channel(1481490068706300005)
     user = member.display_name
+
     data = datetime.now().strftime('%d/%m/%Y')
     after = after.channel
     before = before.channel
@@ -36,26 +47,11 @@ async def on_voice_state_update(member:discord.Member, before, after):
 
     elif(before is not None and after is None and channel):
         print(f'{user} saiu do canal [{before}] as {datetime.now().strftime("%H:%M:%S")} {data}')
-        horasEstudadas = datetime.now() - horaEntrada[member.id]
+        registrarSaida(member=member)
 
-        horasEstudadasFormat = horasEstudadas.seconds / 3600
-
-        with _Sessao() as sessao:
-            usuario_db = obterUsuario(sessao, member.id)
-            usuario_db.tempoEstudo += horasEstudadasFormat
-            sessao.commit()
-            
     elif(before is not None and after is not None and channel):
-        print(f'{user} saiu do canal [{before}] as {datetime.now()} para o canal [{after}] as {horaEntrada[member.id].strftime("%H:%M:%S")} {data}')
-        horasEstudadas = datetime.now() - horaEntrada[member.id]
-
-        horasEstudadasFormat = horasEstudadas.seconds / 3600
-
-        with _Sessao() as sessao:
-            usuario_db = obterUsuario(sessao, member.id)
-            usuario_db.tempoEstudo += horasEstudadasFormat
-            sessao.commit()
-
-
+        print(f'{user} saiu do canal [{before}] as {datetime.now().strftime("%H:%M:%S")} para o canal [{after}] as {horaEntrada[member.id].strftime("%H:%M:%S")} {data}')
+        registrarSaida(member=member)
+        horaEntrada[member.id] = datetime.now()
 
 bot.run(token)
