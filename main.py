@@ -3,6 +3,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from datetime import datetime
 from os import getenv
+import os
 from db import _Sessao, Usuario
 
 load_dotenv()
@@ -12,6 +13,16 @@ permission = discord.Intents.all()
 permission.message_content = True
 permission.members = True
 bot = commands.Bot("!",intents=permission)
+
+@bot.event
+async def on_ready():
+    await carregarCogs()
+    await bot.tree.sync()
+
+async def carregarCogs():
+     for x in os.listdir('cogs'):
+        if x.endswith('.py'):
+            await bot.load_extension(f'cogs.{x[:-3]}')
 
 def obterUsuario(sessao, discord_id):
         usuario_db = sessao.query(Usuario).filter_by(discord_id=discord_id).first()
@@ -53,25 +64,5 @@ async def on_voice_state_update(member:discord.Member, before, after):
         print(f'{user} saiu do canal [{before}] as {datetime.now().strftime("%H:%M:%S")} para o canal [{after}] as {horaEntrada[member.id].strftime("%H:%M:%S")} {data}')
         registrarSaida(member=member)
         horaEntrada[member.id] = datetime.now()
-
-@bot.command()
-async def leaderboard(ctx:commands.Context):
-    with _Sessao() as sessao:
-        topList = sessao.query(Usuario).order_by(Usuario.tempoEstudo.desc()).limit(10).all()
-    embed = discord.Embed(title="LeaderBoard", color=discord.Colour.blue()) 
-    description = ""
-    for x, usuario in enumerate(topList):
-        membro = ctx.guild.get_member(usuario.discord_id)
-        if not membro:
-            membroName = "Usuario desconhecido"
-        else:
-            membroName = membro.display_name
-        tempoEmMinutos = usuario.tempoEstudo * 60
-        horas, minutos = divmod(tempoEmMinutos, 60)
-        description += f'{x+1} - {membroName} - {int(horas)}h {int(minutos)}min\n'
-
-    embed.description = description
-    await ctx.reply(embed=embed)
-
 
 bot.run(token)
