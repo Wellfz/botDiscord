@@ -17,7 +17,8 @@ bot = commands.Bot("!",intents=permission)
 @bot.event
 async def on_ready():
     await carregarCogs()
-    await bot.tree.sync()
+    sync = await bot.tree.sync()
+    print(f'{len(sync)} comandos sincronizados!')
 
 async def carregarCogs():
      for x in os.listdir('cogs'):
