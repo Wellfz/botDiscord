@@ -66,4 +66,17 @@ async def on_voice_state_update(member:discord.Member, before, after):
         registrarSaida(member=member)
         horaEntrada[member.id] = datetime.now()
 
+@bot.event
+async def on_message(msg:discord.Message):
+    if(msg.author == bot.user):
+         return
+    cargo = msg.guild.get_role(1488422333151580211)
+
+    
+    with _Sessao() as sessao:
+        user = obterUsuario(sessao, msg.author.id)
+    if(user.tempoEstudo > 2):
+        await msg.author.add_roles(cargo)
+    return
+        
 bot.run(token)
