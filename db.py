@@ -16,5 +16,5 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True)
     discord_id = Column(BigInteger, unique=True)
     tempoEstudo = Column(Float, default=0)
-
+    
 Base.metadata.create_all(engine)

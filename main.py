@@ -1,9 +1,9 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands,tasks
 from dotenv import load_dotenv
 from datetime import datetime
 from os import getenv
-import os
+from os import listdir
 from db import _Sessao, Usuario
 
 load_dotenv()
@@ -21,7 +21,7 @@ async def on_ready():
     print(f'{len(sync)} comandos sincronizados!')
 
 async def carregarCogs():
-     for x in os.listdir('cogs'):
+     for x in listdir('cogs'):
         if x.endswith('.py'):
             await bot.load_extension(f'cogs.{x[:-3]}')
 
@@ -68,15 +68,25 @@ async def on_voice_state_update(member:discord.Member, before, after):
 
 @bot.event
 async def on_message(msg:discord.Message):
+    cargo = msg.guild.get_role(1488422333151580211)
+    autoditadaRole = msg.guild.get_role(1488590673614602349)
+
     if(msg.author == bot.user):
          return
-    cargo = msg.guild.get_role(1488422333151580211)
-
     
     with _Sessao() as sessao:
         user = obterUsuario(sessao, msg.author.id)
     if(user.tempoEstudo > 2):
         await msg.author.add_roles(cargo)
-    return
-        
+    elif(user.tempoEstudo > 10):
+         await msg.author.add_roles(autoditadaRole)
+
+@tasks.loop(hours=170)
+async def resetarLeaderboard():
+    with _Sessao() as sessao:
+        usuario_db = sessao.query(Usuario).all()
+    for i in usuario_db:
+        i.tempoEstudo = 0
+        sessao.commit()
+     
 bot.run(token)

@@ -20,7 +20,7 @@ class Comandos(commands.Cog):
         for x, usuario in enumerate(topList):
             membro = interaction.guild.get_member(usuario.discord_id)
             if not membro:
-                membroName = "Usuario desconhecido"
+                membroName = interaction.user.display_name
             else:
                 membroName = membro.display_name
             tempoEmMinutos = usuario.tempoEstudo * 60
