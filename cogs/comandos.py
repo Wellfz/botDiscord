@@ -1,10 +1,8 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from datetime import datetime
-import os
+from db import obterUsuario
 from db import _Sessao, Usuario
-
 
 class Comandos(commands.Cog):
     def __init__(self, bot):
@@ -28,6 +26,19 @@ class Comandos(commands.Cog):
             description += f'{x+1} - {membroName} - {int(horas)}h {int(minutos)}min\n'
 
         embed.description = description
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command()
+    async def perfil(self, interaction:discord.Interaction):
+        with _Sessao() as sessao:
+            usuario_db = obterUsuario(sessao=sessao,discord_id=interaction.user.id)
+            level = usuario_db.level
+            xp = usuario_db.xp
+        memberUser = interaction.user.display_name
+        embed = discord.Embed(title=f"Perfil de {memberUser}", color=discord.Colour.red())
+        embed.add_field(name="⚡Level:", value=level,inline=True)
+        embed.add_field(name="🧪Experiência:", value=xp,inline=True)
+
         await interaction.response.send_message(embed=embed)
 
 

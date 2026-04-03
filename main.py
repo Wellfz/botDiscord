@@ -5,6 +5,7 @@ from datetime import datetime
 from os import getenv
 from os import listdir
 from db import _Sessao, Usuario
+from db import obterUsuario,contarLevel,contarXp
 
 load_dotenv()
 token = getenv("TOKEN")
@@ -25,14 +26,6 @@ async def carregarCogs():
         if x.endswith('.py'):
             await bot.load_extension(f'cogs.{x[:-3]}')
 
-def obterUsuario(sessao, discord_id):
-        usuario_db = sessao.query(Usuario).filter_by(discord_id=discord_id).first()
-        if not usuario_db:
-            usuario_db = Usuario(discord_id=discord_id)
-            sessao.add(usuario_db)
-            sessao.commit()
-        return usuario_db
-
 def registrarSaida(member:discord.Member):
         horasEstudadas = datetime.now() - horaEntrada[member.id]
 
@@ -44,6 +37,7 @@ def registrarSaida(member:discord.Member):
             sessao.commit()
 
 horaEntrada = {}
+
 @bot.event
 async def on_voice_state_update(member:discord.Member, before, after):
     channel = member.guild.get_channel(1481490068706300005)
@@ -60,11 +54,15 @@ async def on_voice_state_update(member:discord.Member, before, after):
     elif(before is not None and after is None and channel):
         print(f'{user} saiu do canal [{before}] as {datetime.now().strftime("%H:%M:%S")} {data}')
         registrarSaida(member=member)
+        contarXp(member=member)
+        contarLevel(member=member)
 
-    elif(before is not None and after is not None and channel):
+    elif(before is not None and after is not None and before != after and channel):
         print(f'{user} saiu do canal [{before}] as {datetime.now().strftime("%H:%M:%S")} para o canal [{after}] as {horaEntrada[member.id].strftime("%H:%M:%S")} {data}')
         registrarSaida(member=member)
         horaEntrada[member.id] = datetime.now()
+        contarXp(member=member)
+        contarLevel(member=member)
 
 @bot.event
 async def on_message(msg:discord.Message):
@@ -78,7 +76,7 @@ async def on_message(msg:discord.Message):
         user = obterUsuario(sessao, msg.author.id)
     if(user.tempoEstudo > 2):
         await msg.author.add_roles(cargo)
-    elif(user.tempoEstudo > 10):
+    elif(user.tempoEstudo >= 10):
          await msg.author.add_roles(autoditadaRole)
 
 @tasks.loop(hours=170)
