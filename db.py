@@ -19,6 +19,12 @@ engine = create_engine(DBTOKEN,
 Base = declarative_base()
 _Sessao = sessionmaker(engine)
 
+def create_progress_bar(percentage, length=15):
+    filled_len = int(length * percentage)
+    bar = '🟩' * filled_len + '⬛' * (length - filled_len)
+    return bar
+
+
 def obterUsuario(sessao, discord_id):
     usuario_db = sessao.query(Usuario).filter_by(discord_id=discord_id).first()
     if not usuario_db:
