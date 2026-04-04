@@ -6,6 +6,7 @@ from os import getenv
 from os import listdir
 from db import _Sessao, Usuario
 from db import obterUsuario,contarLevel,contarXp
+from time import sleep
 
 load_dotenv()
 token = getenv("TOKEN")
@@ -14,12 +15,31 @@ permission = discord.Intents.all()
 permission.message_content = True
 permission.members = True
 bot = commands.Bot("!",intents=permission)
+cargos = []
 
 @bot.event
 async def on_ready():
+    resetarLeaderboard.start()
+    global cargos
+    guild = bot.guilds[0]
+    cargos = [
+        (0,  guild.get_role(1488422333151580211)),
+        (3,  guild.get_role(1488590673614602349)),
+        (7,  guild.get_role(1489782324898824232)),
+        (12, guild.get_role(1489782378015490069)),
+        (18, guild.get_role(1489782427047166053)),
+        (25, guild.get_role(1489782458584142035)),
+        (33, guild.get_role(1489782477815021619)),
+        (42, guild.get_role(1489782500623388682)),
+        (52, guild.get_role(1489782523222429786)),
+        (63, guild.get_role(1489782544386756708)),
+        (75, guild.get_role(1489782575370080257)),
+    ]
     await carregarCogs()
     sync = await bot.tree.sync()
-    print(f'{len(sync)} comandos sincronizados!')
+    print(f'{len(sync)} comandos sincronizados...')
+    sleep(3.0)
+    print(f"{bot.user.name} online!")
 
 async def carregarCogs():
      for x in listdir('cogs'):
@@ -56,6 +76,7 @@ async def on_voice_state_update(member:discord.Member, before, after):
         registrarSaida(member=member)
         contarXp(member=member)
         contarLevel(member=member)
+        await nivelCargo(member=member)
 
     elif(before is not None and after is not None and before != after and channel):
         print(f'{user} saiu do canal [{before}] as {datetime.now().strftime("%H:%M:%S")} para o canal [{after}] as {horaEntrada[member.id].strftime("%H:%M:%S")} {data}')
@@ -63,21 +84,19 @@ async def on_voice_state_update(member:discord.Member, before, after):
         horaEntrada[member.id] = datetime.now()
         contarXp(member=member)
         contarLevel(member=member)
+        await nivelCargo(member=member)
 
-@bot.event
-async def on_message(msg:discord.Message):
-    cargo = msg.guild.get_role(1488422333151580211)
-    autoditadaRole = msg.guild.get_role(1488590673614602349)
-
-    if(msg.author == bot.user):
+async def nivelCargo(member:discord.Member):
+    if(member.id == bot.user):
          return
-    
+
     with _Sessao() as sessao:
-        user = obterUsuario(sessao, msg.author.id)
-    if(user.tempoEstudo > 2):
-        await msg.author.add_roles(cargo)
-    elif(user.tempoEstudo >= 10):
-         await msg.author.add_roles(autoditadaRole)
+        user = obterUsuario(sessao=sessao,discord_id=member.id)
+
+        for nivel_minimo, x in cargos:
+            if user.level >= nivel_minimo:
+                await member.add_roles(x)
+        sessao.commit()
 
 @tasks.loop(hours=170)
 async def resetarLeaderboard():
